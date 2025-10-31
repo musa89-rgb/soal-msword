@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Kritis Microsoft Word</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .question-container {
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .question-container:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .option-label {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .option-label:hover {
+            background-color: #f9fafb;
+        }
+        input[type="radio"]:checked + .option-label {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+            font-weight: 500;
+        }
+        input[type="radio"] {
+            display: none;
+        }
+        #signatureCanvas {
+            border: 2px solid #3b82f6;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            touch-action: none; /* Mencegah scrolling saat menggambar di perangkat sentuh */
+        }
+        .signature-controls button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl w-full bg-white rounded-lg shadow-xl p-8 space-y-8">
+        
+        <!-- Header --><div>
+            <h1 class="text-center text-3xl font-bold text-gray-900">
+                Kuis Kritis Microsoft Word
+            </h1>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Uji pemahaman Anda tentang skenario dan fitur lanjutan di MS Word.
+            </p>
+        </div>
+
+        <!-- Form Kuis --><form id="quizForm" class="mt-8 space-y-6">
+            
+            <!-- Input Nama --><div id="nameContainer">
+                <label for="studentName" class="block text-sm font-medium text-gray-700">Nama Lengkap Anda:</label>
+                <input type="text" name="studentName" id="studentName" required
+                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+
+            <!-- Kontainer Soal (diisi oleh JS) --><div id="quizContainer" class="space-y-6"></div>
+
+            <!-- Tombol Selesai --><button type="submit"
+                    id="submitButton"
+                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Selesai & Lanjut Tanda Tangan
+            </button>
+        </form>
+
+        <!-- Tampilan Tanda Tangan (tersembunyi) --><div id="signatureContainer" class="hidden text-center p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Tanda Tangan Anda</h2>
+            <p class="text-base text-gray-600 mb-4">
+                Silakan bubuhkan tanda tangan Anda di kotak di bawah ini.
+            </p>
+            <canvas id="signatureCanvas" width="400" height="150" class="mb-4"></canvas>
+            <div class="signature-controls flex justify-center space-x-4 mb-6">
+                <button id="clearSignature" type="button" class="bg-red-500 text-white hover:bg-red-600">Hapus</button>
+                <button id="saveSignature" type="button" class="bg-green-600 text-white hover:bg-green-700">Selesai Tanda Tangan</button>
+            </div>
+            <img id="savedSignature" class="hidden w-48 mx-auto border border-gray-300 rounded-md" alt="Tanda Tangan Tersimpan">
+        </div>
+
+        <!-- Tampilan Hasil (tersembunyi) --><div id="resultsContainer" class="hidden text-center p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Hasil Kuis Anda</h2>
+            <p id="scoreText" class="text-4xl font-bold text-blue-600 mb-2"></p>
+            <p id="scorePercentage" class="text-xl text-gray-700 mb-6"></p>
+            
+            <p class="text-base text-gray-600 mb-6">
+                Klik tombol di bawah ini untuk mengirimkan hasil Anda kepada guru melalui email.
+            </p>
+            
+            <a id="emailButton"
+               href="#"
+               target="_blank"
+               class="inline-flex items-center justify-center py-3 px-6 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                Kirim Hasil ke Guru
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Data Soal
+        const questions = [
+            {
+                question: "Mengapa menggunakan 'Styles' (misal: Heading 1, Normal) lebih baik daripada memformat teks secara manual (Bold, ganti font) untuk dokumen panjang?",
+                options: [
+                    "Karena membuat dokumen lebih cepat di-scroll.",
+                    "Agar bisa membuat Daftar Isi otomatis dan menjaga konsistensi format.",
+                    "Karena 'Styles' menggunakan lebih sedikit memori komputer.",
+                    "Agar dokumen tidak bisa diedit oleh orang lain."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Apa perbedaan *utama* antara 'Page Break' (Ctrl+Enter) dan 'Section Break (Next Page)'?",
+                options: [
+                    "Page Break untuk halaman ganjil, Section Break untuk halaman genap.",
+                    "Page Break hanya memulai halaman baru; Section Break memulai halaman baru dan mengizinkan format berbeda (seperti header/footer atau orientasi landscape) di halaman tersebut.",
+                    "Page Break membuat spasi 2 baris, Section Break membuat spasi 3 baris.",
+                    "Tidak ada perbedaan, keduanya adalah fitur yang sama."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Anda perlu mengirim surat undangan yang isinya sama ke 100 orang berbeda, tetapi nama dan alamat penerima (dari file Excel) harus otomatis terisi di setiap surat. Fitur *paling efisien* untuk ini adalah:",
+                options: [
+                    "Copy-paste manual sebanyak 100 kali.",
+                    "Find and Replace.",
+                    "Mail Merge.",
+                    "Membuat 100 text box terpisah."
+                ],
+                answer: 2 // index 2
+            },
+            {
+                question: "Saat berkolaborasi dalam satu dokumen, fitur apa yang harus diaktifkan agar Anda bisa melihat *siapa* yang membuat *perubahan apa*?",
+                options: [
+                    "Track Changes",
+                    "Spell Check",
+                    "Comments",
+                    "Protect Document"
+                ],
+                answer: 0 // index 0
+            },
+            {
+                question: "Anda telah menggunakan 'Heading 1' dan 'Heading 2' secara konsisten di laporan Anda. Bagaimana cara *tercepat* membuat Daftar Isi yang akurat?",
+                options: [
+                    "Mengetik ulang setiap judul bab dan nomor halamannya secara manual.",
+                    "Menggunakan fitur 'References' > 'Table of Contents' > 'Automatic Table'.",
+                    "Menggunakan fitur 'Insert' > 'Bookmark' untuk setiap judul.",
+                    "Membuat tabel manual dengan dua kolom (Judul Bab, Halaman)."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Untuk memberi jarak antar paragraf, praktik terbaik (best practice) adalah:",
+                options: [
+                    "Menekan tombol 'Enter' dua kali di akhir setiap paragraf.",
+                    "Menggunakan 'Line and Paragraph Spacing' > 'Add Space Before/After Paragraph'.",
+                    "Mengubah ukuran font baris terakhir paragraf menjadi sangat kecil.",
+                    "Menekan tombol 'Tab' di awal paragraf baru."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Dalam dokumen surat lamaran (seperti di 'word2.doc'), untuk membuat data diri (Nama, Alamat) sejajar rapi dengan titik duanya (:), fitur yang paling tepat digunakan adalah:",
+                options: [
+                    "Menekan spasi berulang kali sampai lurus.",
+                    "Menggunakan 'Left Tab' untuk teks dan 'Left Tab' lain untuk data setelah titik dua.",
+                    "Menggunakan fitur 'Columns' (Kolom).",
+                    "Menggambar 'Text Box' untuk setiap baris data."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Apa kegunaan mencentang opsi 'Different First Page' pada pengaturan Header & Footer?",
+                options: [
+                    "Untuk membuat halaman pertama memiliki orientasi Landscape.",
+                    "Untuk membuat halaman pertama tidak memiliki header/footer (atau memiliki header yang berbeda), seperti pada halaman sampul (cover).",
+                    "Untuk mengubah jenis font khusus di halaman pertama.",
+                    "Untuk mengunci dokumen agar halaman pertama tidak bisa diedit."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Anda ingin menyisipkan gambar di antara teks, tetapi gambar tersebut 'merusak' tatanan teks (teks menjadi terdorong ke atas dan bawah). Agar teks bisa mengalir *di sekitar* gambar, Anda harus mengubah:",
+                options: [
+                    "Ukuran gambar (Image Size).",
+                    "Pengaturan 'Wrap Text' (misal: menjadi 'Square' atau 'Tight').",
+                    "Resolusi gambar (Resolution).",
+                    "Warna gambar (Image Color)."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Anda memiliki satu paragraf dengan format yang sempurna (font, warna, spasi). Bagaimana cara *tercepat* menerapkan format yang *sama persis* ke lima paragraf lain yang letaknya terpisah?",
+                options: [
+                    "Mencatat semua pengaturan format, lalu menerapkannya satu per satu ke paragraf lain.",
+                    "Memilih paragraf yang sudah benar, *mengklik dua kali* ikon 'Format Painter', lalu mengklik lima paragraf lainnya.",
+                    "Menyimpan dokumen, menutupnya, lalu membukanya lagi.",
+                    "Menggunakan 'Find and Replace' untuk mengganti gaya font."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Anda memiliki dokumen 20 halaman (Portrait), tetapi Anda ingin halaman 15 *saja* yang berorientasi Landscape (horizontal). Apa yang harus Anda sisipkan?",
+                options: [
+                    "Satu 'Page Break' di akhir halaman 14.",
+                    "Dua 'Text Box' di halaman 14 dan 16.",
+                    "Satu 'Section Break' di akhir halaman 14 dan satu 'Section Break' lagi di akhir halaman 15.",
+                    "Gambar berukuran landscape di halaman 15."
+                ],
+                answer: 2 // index 2
+            },
+            {
+                question: "Bagaimana cara membuat teks rujukan (misal: 'Lihat Tabel 5 di halaman 12') agar *otomatis ter-update* jika Tabel 5 bergeser ke halaman 13?",
+                options: [
+                    "Mengetiknya secara manual dan mengingat untuk mengeceknya sebelum dicetak.",
+                    "Memberi warna merah pada teks tersebut sebagai pengingat.",
+                    "Menggunakan fitur 'Insert' > 'Cross-reference' untuk merujuk ke Tabel 5.",
+                    "Menggunakan 'Hyperlink' ke website eksternal."
+                ],
+                answer: 2 // index 2
+            },
+            {
+                question: "Apa perbedaan fungsional utama antara 'Comment' (Komentar) dan 'Track Change' (Perubahan Terlacak)?",
+                options: [
+                    "Comment hanya bisa dilihat oleh penulis, Track Change bisa dilihat semua orang.",
+                    "Comment digunakan untuk memberi masukan *tentang* teks (misal: 'Paragraf ini membingungkan'), sedangkan Track Change digunakan untuk *mengedit* teks itu sendiri (misal: menghapus atau menambah kalimat) yang bisa diterima atau ditolak.",
+                    "Track Change akan otomatis hilang setelah 24 jam.",
+                    "Comment akan dicetak, sedangkan Track Change tidak akan dicetak."
+                ],
+                answer: 1 // index 1
+            },
+            {
+                question: "Anda ingin menampilkan struktur organisasi perusahaan (Direktur > Manajer > Staf). Fitur apa yang *lebih tepat* digunakan daripada 'Chart' (Grafik) standar?",
+                options: [
+                    "SmartArt (Hierarchy/Hierarki)",
+                    "WordArt",
+                    "Table (Tabel)",
+                    "Pie Chart"
+                ],
+                answer: 0 // index 0
+            },
+            {
+                question: "Fitur 'Center Tab' (seperti yang disarankan di 'word2.doc' untuk tanda tangan) berfungsi untuk:",
+                options: [
+                    "Membuat seluruh paragraf menjadi rata tengah.",
+                    "Membuat teks yang diketik *setelah* menekan tombol Tab menjadi rata tengah di titik Tab tersebut.",
+                    "Menyisipkan tabel di tengah halaman.",
+                    "Membagi halaman menjadi dua bagian tengah."
+                ],
+                answer: 1 // index 1
+            }
+        ];
+
+        const quizContainer = document.getElementById('quizContainer');
+        const quizForm = document.getElementById('quizForm');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const submitButton = document.getElementById('submitButton');
+        const nameContainer = document.getElementById('nameContainer');
+        const signatureContainer = document.getElementById('signatureContainer');
+        
+        // Variabel global untuk menyimpan skor dan nama
+        let studentNameGlobal = '';
+        let studentScoreGlobal = 0;
+
+        // --- Canvas Tanda Tangan ---
+        const signatureCanvas = document.getElementById('signatureCanvas');
+        const ctx = signatureCanvas.getContext('2d');
+        const clearSignatureBtn = document.getElementById('clearSignature');
+        const saveSignatureBtn = document.getElementById('saveSignature');
+        const savedSignatureImg = document.getElementById('savedSignature');
+
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Atur style gambar
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000000';
+
+        function draw(e) {
+            if (!isDrawing) return;
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            let clientX, clientY;
+            if (e.touches) { // Touch event
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else { // Mouse event
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            const rect = signatureCanvas.getBoundingClientRect();
+            ctx.lineTo(clientX - rect.left, clientY - rect.top);
+            ctx.stroke();
+            [lastX, lastY] = [clientX - rect.left, clientY - rect.top];
+        }
+
+        signatureCanvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = signatureCanvas.getBoundingClientRect();
+            [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+        });
+        signatureCanvas.addEventListener('mousemove', draw);
+        signatureCanvas.addEventListener('mouseup', () => isDrawing = false);
+        signatureCanvas.addEventListener('mouseout', () => isDrawing = false);
+
+        // Touch events for mobile
+        signatureCanvas.addEventListener('touchstart', (e) => {
+            isDrawing = true;
+            const rect = signatureCanvas.getBoundingClientRect();
+            [lastX, lastY] = [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+            e.preventDefault(); // Mencegah scrolling
+        });
+        signatureCanvas.addEventListener('touchmove', draw);
+        signatureCanvas.addEventListener('touchend', () => isDrawing = false);
+        signatureCanvas.addEventListener('touchcancel', () => isDrawing = false);
+
+
+        clearSignatureBtn.addEventListener('click', () => {
+            ctx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+        });
+
+        saveSignatureBtn.addEventListener('click', () => {
+            const dataURL = signatureCanvas.toDataURL(); // Mendapatkan gambar sebagai base64
+            savedSignatureImg.src = dataURL;
+            savedSignatureImg.classList.remove('hidden');
+            signatureCanvas.classList.add('hidden');
+            clearSignatureBtn.classList.add('hidden');
+            saveSignatureBtn.classList.add('hidden');
+
+            // Lanjutkan ke tampilan hasil kuis
+            showResults(studentScoreGlobal, studentNameGlobal);
+        });
+        // --- Akhir Canvas Tanda Tangan ---
+
+
+        // Fungsi untuk menampilkan soal
+        function displayQuestions() {
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-container';
+
+                const questionText = document.createElement('p');
+                questionText.className = 'text-lg font-medium text-gray-900 mb-4';
+                questionText.innerText = `${index + 1}. ${q.question}`;
+                questionDiv.appendChild(questionText);
+
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'space-y-3';
+
+                q.options.forEach((option, i) => {
+                    const optionId = `q${index}_option${i}`;
+                    
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.id = optionId;
+                    radioInput.name = `question${index}`;
+                    radioInput.value = i;
+                    radioInput.required = true;
+                    
+                    const optionLabel = document.createElement('label');
+                    optionLabel.htmlFor = optionId;
+                    optionLabel.className = 'option-label';
+                    optionLabel.innerText = option;
+
+                    const optionWrapper = document.createElement('div');
+                    optionWrapper.appendChild(radioInput);
+                    optionWrapper.appendChild(optionLabel);
+                    
+                    optionsDiv.appendChild(optionWrapper);
+                });
+
+                questionDiv.appendChild(optionsDiv);
+                quizContainer.appendChild(questionDiv);
+            });
+        }
+
+        // Fungsi saat submit kuis
+        quizForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const studentName = document.getElementById('studentName').value;
+            if (!studentName) {
+                alert("Harap isi nama lengkap Anda.");
+                return;
+            }
+            studentNameGlobal = studentName; // Simpan nama secara global
+
+            let score = 0;
+            const formData = new FormData(quizForm);
+
+            for (let i = 0; i < questions.length; i++) {
+                const userAnswer = formData.get(`question${i}`);
+                if (userAnswer !== null && parseInt(userAnswer) === questions[i].answer) {
+                    score++;
+                }
+            }
+            studentScoreGlobal = score; // Simpan skor secara global
+
+            // Sembunyikan form kuis
+            quizForm.classList.add('hidden');
+            
+            // Tampilkan kontainer tanda tangan
+            signatureContainer.classList.remove('hidden');
+        });
+
+        // Fungsi untuk menampilkan hasil
+        function showResults(score, studentName) {
+            // Sembunyikan kontainer tanda tangan (jika masih terlihat)
+            signatureContainer.classList.add('hidden');
+
+            // Tampilkan kontainer hasil
+            resultsContainer.classList.remove('hidden');
+
+            const totalQuestions = questions.length;
+            const percentage = ((score / totalQuestions) * 100).toFixed(1);
+
+            document.getElementById('scoreText').innerText = `${score} / ${totalQuestions}`;
+            document.getElementById('scorePercentage').innerText = `Skor Anda: ${percentage}%`;
+
+            // Buat link mailto
+            const email = 'musa89@guru.smk.belajar.id';
+            const subject = `Hasil Kuis MS Word - ${studentName}`;
+            // Catatan: Tanda tangan tidak bisa dikirim via mailto secara langsung.
+            // Anda bisa tambahkan teks seperti "Tanda tangan telah dibubuhkan secara digital pada kuis."
+            const body = `Halo, Pak Musa.\n\nBerikut adalah hasil kuis MS Word saya:\n\nNama: ${studentName}\nSkor: ${score} dari ${totalQuestions} (${percentage}%)\n\nTanda tangan telah dibubuhkan secara digital pada kuis ini.`;
+            
+            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            document.getElementById('emailButton').href = mailtoLink;
+        }
+
+        // Mulai tampilkan soal saat halaman dimuat
+        displayQuestions();
+    </script>
+</body>
+</html>
